@@ -17,3 +17,11 @@
 - Baseline 200 cows with configured metrics; 1000 cows extended; document messages/s, HTTP RPS, DB writes/s, p95 API and WS lag.
 - Load test only on controlled environment; report measured hardware, payload size, metric frequency and failures.
 - No promised RPS until tests are performed.
+
+## Business-workflow acceptance (MVP)
+- An operator can follow one synthetic/replayed cow from latest readings to historical context, see measurement source/freshness, review a generated `anomaly` warning and acknowledge/resolve the alert; the UI does not call it a confirmed mastitis case.
+- An operator can enter a veterinary observation/manual record with a historical observation time, and later see its author and correction history in the cow timeline.
+- A user with `operator` permissions cannot manage users or simulations; `admin` permissions remain unchanged. Business stakeholders do not introduce extra MVP system roles.
+- The demo and accompanying results clearly distinguish its tested **200-cow** baseline / **1,000-cow** extended scenarios from the **3,500-cow** business case; no verified farm ROI, clinical sensitivity or 25% mastitis reduction is claimed from synthetic data.
+
+Business assumptions, KPIs and financial validation questions are documented in `business-requirements.md`.
