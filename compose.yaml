@@ -1,0 +1,84 @@
+name: cowhealth
+x-env: &env
+  DATABASE_URL: postgres://${POSTGRES_USER:-cowhealth}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cowhealth}?sslmode=disable
+  AMQP_URL: amqp://${RABBITMQ_USER:-cowhealth}:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}@rabbitmq:5672/
+  APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  INTERNAL_TOKEN: ${INTERNAL_TOKEN:?Set INTERNAL_TOKEN}
+x-go: &go
+  restart: unless-stopped
+  environment: *env
+  depends_on:
+    migrate: {condition: service_completed_successfully}
+    rabbitmq: {condition: service_healthy}
+services:
+  postgres:
+    image: postgres:17.5-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cowhealth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-cowhealth}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  rabbitmq:
+    image: rabbitmq:4.1.0-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-cowhealth}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    build: {context: ., dockerfile: services/Dockerfile, args: {SERVICE: migrate}}
+    environment: *env
+    depends_on: {postgres: {condition: service_healthy}}
+  seed:
+    build: {context: ., dockerfile: services/Dockerfile, args: {SERVICE: seed}}
+    environment:
+      <<: *env
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
+      OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:?Set OPERATOR_PASSWORD}
+    depends_on: {migrate: {condition: service_completed_successfully}}
+  api-service:
+    <<: *go
+    build: {context: ., dockerfile: services/Dockerfile, args: {SERVICE: api-service}}
+  ingest-service:
+    <<: *go
+    build: {context: ., dockerfile: services/Dockerfile, args: {SERVICE: ingest-service}}
+  data-worker:
+    <<: *go
+    build: {context: ., dockerfile: services/Dockerfile, args: {SERVICE: data-worker}}
+  sensor-simulator:
+    <<: *go
+    build: {context: ., dockerfile: services/Dockerfile, args: {SERVICE: sensor-simulator}}
+    environment:
+      <<: *env
+      INGEST_URL: http://ingest-service:8080
+  ml-analyzer:
+    <<: *go
+    build: {context: ., dockerfile: services/Dockerfile, args: {SERVICE: ml-analyzer}}
+    environment:
+      <<: *env
+      ML_URL: http://ml-service:8000
+  ml-service:
+    build: {context: ., dockerfile: services/ml-service/Dockerfile}
+    restart: unless-stopped
+  web:
+    build: {context: ., dockerfile: frontend/Dockerfile}
+    ports: ['127.0.0.1:${APP_PORT:-8080}:80']
+    depends_on:
+      api-service: {condition: service_healthy}
+      seed: {condition: service_completed_successfully}
+    restart: unless-stopped
+volumes:
+  postgres-data:
+  rabbitmq-data:
