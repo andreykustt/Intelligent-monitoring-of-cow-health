@@ -1,0 +1,35 @@
+import {test,expect} from '@playwright/test';
+import {readFileSync} from 'node:fs';
+const env=Object.fromEntries(readFileSync('../.env','utf8').trim().split('\n').filter(l=>l&&!l.startsWith('#')).map(l=>{const i=l.indexOf('=');return [l.slice(0,i),l.slice(i+1)]}));
+test('operator can inspect cows and save an observation',async({page})=>{
+ await page.goto('/');
+ await page.getByLabel('Логин',{exact:true}).fill('operator');
+ await page.getByLabel('Пароль',{exact:true}).fill(env.OPERATOR_PASSWORD);
+ await page.getByRole('button',{name:'Войти в систему'}).click();
+ await expect(page.getByRole('heading',{name:'Обзор стада'})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Симуляции',exact:true})).toHaveCount(0);
+ await page.getByRole('link',{name:'Монитор',exact:true}).click();
+ await page.getByLabel('Поиск животных').fill('COW-001');
+ await page.getByRole('link',{name:/COW-001/}).click();
+ await expect(page.getByRole('heading',{name:/COW-001/})).toBeVisible();
+ await page.getByRole('button',{name:'Добавить запись',exact:true}).click();
+ await page.getByLabel('Тип записи').selectOption('inspections');
+ await page.getByRole('button',{name:'Сохранить запись',exact:true}).click();
+ await expect(page.getByText('Версия 1',{exact:true}).first()).toBeVisible();
+ await page.getByRole('button',{name:'Выйти',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Добро пожаловать'})).toBeVisible();
+});
+test('admin can use animal registration',async({page})=>{
+ await page.goto('/');
+ await page.getByLabel('Логин',{exact:true}).fill('admin');
+ await page.getByLabel('Пароль',{exact:true}).fill(env.ADMIN_PASSWORD);
+ await page.getByRole('button',{name:'Войти в систему'}).click();
+ await page.getByRole('link',{name:'Животные',exact:true}).click();
+ const id='TEST-'+Date.now();
+ await page.getByLabel('Номер животного').fill(id);
+ await page.getByLabel('Имя',{exact:true}).fill('Учебная корова');
+ await page.getByRole('button',{name:'Сохранить',exact:true}).click();
+ await expect(page.getByText('Данные сохранены')).toBeVisible();
+ await page.getByLabel('Поиск животных').fill(id);
+ await expect(page.getByRole('link',{name:id+' · Учебная корова'})).toBeVisible();
+});
