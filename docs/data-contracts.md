@@ -43,3 +43,11 @@ Persist `measured_at`/`observed_at` vs `created_at`, `created_by`, correction au
 - `cow_count`, `metrics_enabled`, `interval_ms_by_metric`, `duration_seconds`, `mode: synthetic|replay`, `playback_speed`, `scenario`, optionally `target_events_per_second` (advanced).
 - Distinguish number of cows, number of sensors, readings per sensor, HTTP request rate, and broker event rate.
 - States `created`, `starting`, `running`, `paused`, `completed`, `stopped`, `failed`. Commands idempotent/versioned.
+
+## Implementation additions
+
+Telemetry requires `source: synthetic|replay` explicitly. Ingest sets received_at in UTC before publication and overwrites any client-supplied arrival time. Retries retain event_id; a previously stored duplicate preserves its original received_at. Sensor IDs in v1 are `<cow_id>:<metric_type>`. The worker validates registration and farm relationship to simulation; invalid foreign references go to DLQ. Ingest performs envelope/technical-range validation without writing or querying PostgreSQL; 202 is broker acceptance, not storage validation/commit.
+
+Manual API uses observed_at consistently for all kinds; UI labels it as measurement/sample/inspection time. Payload fields and units are specified in api.md. Audit preserves original created_by and created_at; each revision stores its own actor/time/reason. BCS uses scale 1–5 step .25. Hourly telemetry remains synthetic scalar windows; activity is a generated dimensionless value in [0,1], not an estimate computed from real accelerometers.
+
+Simulator defaults: 200 registered cows, all 9 metrics, 5000ms each, duration 7200s, seed 42. Technical intervals 1000–3600000ms, max 1000 cows, max 24h duration. Synthetic bases: temperature 38.6, pulse 65, respiration 25, activity .5, steps 12, pH 6.4, rumination 25, feed 2, water 4; independent Gaussian noise std=2.5% of base, clamped nonnegative. These values are demo settings, not medical norms. Anomaly scenario changes temperature/pulse/activity for every tenth cow; missing scenario skips every fifth cow. Per-metric frequency is configurable; distribution customization via UI is deferred.
