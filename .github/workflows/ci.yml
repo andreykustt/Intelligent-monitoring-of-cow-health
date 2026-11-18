@@ -1,0 +1,38 @@
+name: checks
+on: [push, pull_request]
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: services}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: services/go.mod, cache-dependency-path: services/go.sum}
+      - run: test -z "$(gofmt -l .)"
+      - run: go test ./...
+      - run: go vet ./...
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: frontend}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci
+      - run: npm run generate:api && git diff --exit-code src/api-schema.d.ts
+      - run: npm run lint && npm run build
+  stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate ephemeral test configuration
+        run: python3 scripts/init_env.py
+      - run: docker compose config -q
+      - run: docker compose up -d --build --wait --wait-timeout 180
+      - run: python3 scripts/smoke.py
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --tail 100
+      - name: Stop containers
+        if: always()
+        run: docker compose down

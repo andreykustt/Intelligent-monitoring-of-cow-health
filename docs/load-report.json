@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-18T19:38:29Z",
+  "host": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43",
+  "logical_cpus": 22,
+  "cows": 200,
+  "metrics": 9,
+  "interval_ms": 5000,
+  "duration_measured_seconds": 20.02,
+  "stored_events_delta": 7155,
+  "observed_db_events_per_second": 357.43,
+  "http_list_requests": 64,
+  "http_list_wall_p95_ms": 70.83,
+  "http_list_wall_median_ms": 66.28,
+  "notes": [
+    "Includes startup and curl subprocess overhead.",
+    "Single local run; not a capacity guarantee.",
+    "Other demo history remains in database.",
+    "1000-cow extended run and browser render latency not measured."
+  ]
+}
