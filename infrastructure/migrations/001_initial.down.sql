@@ -1,0 +1,1 @@
+DROP TABLE alert_actions,alerts,ml_predictions,analysis_jobs,audit_log,manual_revisions,manual_records,outbox_events,cow_latest_state,sensor_measurements,simulation_commands,simulations,sensors,metric_definitions,cows,sessions,user_farms,users,farms;

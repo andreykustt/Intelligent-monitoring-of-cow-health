@@ -18,3 +18,13 @@
 - Use parametrized SQL and migrations with explicit down/rollback plan.
 - Retention and partitioning are measured decisions; do not introduce TimescaleDB prematurely.
 - Split database writers by table ownership documented in `docs/architecture.md`.
+
+## Implemented physical schema
+
+`infrastructure/migrations/001_initial.up.sql` is the first explicit schema. The Go services share one Go module but retain separate cmd entrypoints and internal ownership. user_farms implements many-to-many scope. Cow IDs and farm IDs are text; operational/event IDs are UUID. sessions stores SHA-256 hashes of opaque random tokens; passwords use bcrypt cost 12.
+
+Manual physical storage uses `manual_records(kind,payload jsonb)` and append-only `manual_revisions` rather than five normalized tables from the initial outline. This bounded MVP choice shares revision/idempotency logic; API validates kind-specific numeric types, enums, units and required fields. Historical measurements stay typed relational rows; no measurements are stored in an unvalidated generic blob. Queries/consumers use the documented API, so the physical change has no existing consumer migration.
+
+Analysis jobs are durable and retried independently. Prediction uniqueness is (cow_id,window_end,model_version,schema_version). Active alert uniqueness is (cow_id,condition) WHERE state!='resolved'. Outbox rows have an owner; each owning service publishes only its rows. Simulator reads durable simulation commands/configs and publishes actual state; API consumes state events and writes simulations. Command events are wakeup/integration notifications; database command versions are the durable reconciliation source. API owns alert_actions and changes alert state as its documented exception to analyzer ownership.
+
+Unknown/invalid worker messages are dead-lettered; transient processing errors are requeued with quorum delivery limit 5. Delivery is at-least-once. No automatic retention/partitioning. Migration rollback SQL is explicit and destructive for the initial schema; use backup and operator review.
