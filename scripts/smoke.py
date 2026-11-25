@@ -1,9 +1,13 @@
 """API acceptance using curl; creates demo records."""
-import time
+import json
 import subprocess
+import sys
+import time
 import uuid
 from datetime import datetime, timezone
-from http_client import Client
+from pathlib import Path
+from http_client import Client, wait_for_simulation
+from init_env import ROOT
 
 admin, operator, anon = Client(), Client(), Client()
 anon.call('/cows', expected=401)
@@ -19,6 +23,15 @@ admin.call('/cows?sort=sql-injection', expected=422)
 admin.call('/cows?farm_id=not-permitted')['items'] == []
 assert admin.call('/cows?farm_id=not-permitted')['total'] == 0
 print('PASS RBAC, CSRF, scope and query validation')
+contract = json.loads((ROOT / 'docs/openapi.json').read_text(encoding='utf-8'))
+alert_path = '/alerts/' + str(uuid.uuid4())
+for action, expected in [('acknowledge', 404), ('resolve', 422)]:
+    operation = contract['paths']['/alerts/{id}/' + action]['post']
+    schema_ref = operation['requestBody']['content']['application/json']['schema']['$ref']
+    required = contract['components']['schemas'][schema_ref.rsplit('/', 1)[1]].get('required', [])
+    assert required == ([] if action == 'acknowledge' else ['note']), required
+    operator.call(alert_path + '/' + action, 'POST', {}, expected)
+print('PASS alert comment contract')
 page = operator.call('/cows')
 assert page['total'] >= 200 and len(page['items']) == 25
 cow = page['items'][0]['id']
@@ -66,7 +79,7 @@ for _ in range(40):
         break
     time.sleep(.5)
 assert len(readings) >= 3, readings
-subprocess.run(['python3','scripts/check_stream.py'],check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name('check_stream.py'))], check=True)
 admin.call('/simulations/'+sim['id']+'/pause','POST',{},202)
 for _ in range(40):
     if admin.call('/simulations/'+sim['id'])['state']=='paused':
@@ -79,7 +92,13 @@ for _ in range(40):
         break
     time.sleep(.5)
 assert admin.call('/simulations/'+sim['id'])['state']=='running'
+config_path = '/simulations/{id}/config'
+responses = contract['paths'][config_path]['patch']['responses']
+assert '202' in responses and '200' not in responses
+updated = admin.call(config_path.format(id=sim['id']), 'PATCH', config, 202)
+assert isinstance(updated['version'], int) and updated['state'] == 'running', updated
 admin.call('/simulations/'+sim['id']+'/stop','POST',{},202)
+wait_for_simulation(admin, sim['id'], 'stopped')
 print('PASS simulator start, persisted telemetry, pause, resume and stop')
 operator.call('/auth/logout','POST',{})
 operator.call('/auth/me',expected=401)

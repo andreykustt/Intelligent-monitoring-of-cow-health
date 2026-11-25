@@ -18,7 +18,7 @@ Base: `/api/v1`. JSON, UTC ISO 8601 timestamps, pagination and typed errors. Coo
 | GET | `/analytics/overview` | herd overview |
 | GET | `/analytics/{metric}` | aggregated bins by date, farm, cow group |
 | GET | `/alerts` | paginated alerts |
-| POST | `/alerts/{id}/acknowledge` | acknowledge |
+| POST | `/alerts/{id}/acknowledge` | acknowledge with optional note, accepts `{}` |
 | POST | `/alerts/{id}/resolve` | resolve with note |
 | POST | `/milkings` | manual milking record |
 | POST | `/inspections` | visual inspection |
@@ -31,7 +31,7 @@ Base: `/api/v1`. JSON, UTC ISO 8601 timestamps, pagination and typed errors. Coo
 | POST | `/simulations/{id}/pause` | pause `[admin]` |
 | POST | `/simulations/{id}/resume` | resume `[admin]` |
 | POST | `/simulations/{id}/stop` | stop `[admin]` |
-| PATCH | `/simulations/{id}/config` | change live rate `[admin]` |
+| PATCH | `/simulations/{id}/config` | change live rate `[admin]`, returns `202 {version,state}` |
 | GET/POST | `/users` | manage users `[admin]` |
 
 Use consistent error: `{ "error": {"code":"VALIDATION_ERROR","message":"...","details":{}} }`. Validate filter/sort allowlists, date ranges and maximum page/window sizes server-side. Manual edit should create an auditable revision, not erase originals.
