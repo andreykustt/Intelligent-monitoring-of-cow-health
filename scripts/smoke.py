@@ -1,9 +1,11 @@
 """API acceptance using curl; creates demo records."""
 import time
 import subprocess
+import sys
 import uuid
 from datetime import datetime, timezone
-from http_client import Client
+from pathlib import Path
+from http_client import Client, wait_for_simulation
 
 admin, operator, anon = Client(), Client(), Client()
 anon.call('/cows', expected=401)
@@ -66,7 +68,7 @@ for _ in range(40):
         break
     time.sleep(.5)
 assert len(readings) >= 3, readings
-subprocess.run(['python3','scripts/check_stream.py'],check=True)
+subprocess.run([sys.executable, str(Path(__file__).with_name('check_stream.py'))], check=True)
 admin.call('/simulations/'+sim['id']+'/pause','POST',{},202)
 for _ in range(40):
     if admin.call('/simulations/'+sim['id'])['state']=='paused':
@@ -80,6 +82,7 @@ for _ in range(40):
     time.sleep(.5)
 assert admin.call('/simulations/'+sim['id'])['state']=='running'
 admin.call('/simulations/'+sim['id']+'/stop','POST',{},202)
+wait_for_simulation(admin, sim['id'], 'stopped')
 print('PASS simulator start, persisted telemetry, pause, resume and stop')
 operator.call('/auth/logout','POST',{})
 operator.call('/auth/me',expected=401)

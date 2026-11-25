@@ -4,14 +4,33 @@ import tempfile
 import json
 import os
 import time
-import uuid
-import urllib.request
-import urllib.error
-from datetime import datetime, timezone
 from pathlib import Path
 
-env = dict(line.split('=', 1) for line in Path('.env').read_text().splitlines() if line and not line.startswith('#'))
+from init_env import ROOT
+
+ENV_FILE = Path(os.environ.get('COWHEALTH_ENV_FILE', ROOT / '.env'))
+env = dict(line.split('=', 1) for line in ENV_FILE.read_text().splitlines() if line and not line.startswith('#'))
 ORIGIN = env.get('APP_ORIGIN', 'http://localhost:8080')
+
+
+def compose_args(*args):
+    command = ['docker', 'compose', '--file', str(ROOT / 'compose.yaml'), '--env-file', str(ENV_FILE)]
+    if project := os.environ.get('COWHEALTH_COMPOSE_PROJECT'):
+        command.extend(['--project-name', project])
+    return [*command, *args]
+
+
+def wait_for_simulation(client, simulation_id, state, timeout=30):
+    deadline = time.monotonic() + timeout
+    while True:
+        simulation = client.call('/simulations/' + simulation_id)
+        actual = simulation['state']
+        if actual == state:
+            return simulation
+        if actual in {'stopped', 'failed', 'completed'} or time.monotonic() >= deadline:
+            raise RuntimeError(f'Simulation {simulation_id}: expected {state}, got {actual}')
+        time.sleep(0.5)
+
 
 class Client:
     def __init__(self):
