@@ -59,7 +59,7 @@ def run(check, arguments):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('check', choices=['smoke'])
+    parser.add_argument('check', choices=['smoke', 'load_check'])
     parser.add_argument('arguments', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     run(args.check, args.arguments)

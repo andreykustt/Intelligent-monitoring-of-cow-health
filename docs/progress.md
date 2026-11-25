@@ -1,5 +1,12 @@
 # Progress log
 
+## P0-05, P1-08 и P2-04
+
+- Базовая smoke-проверка запускает отдельный Compose-проект и ждёт фактической остановки симуляции.
+- OpenAPI и TS-типы описывают необязательный комментарий при подтверждении уведомления и ответ `202` с версией при изменении конфигурации симуляции. Поведение Go API прежнее.
+- Нагрузочный сценарий на 200 животных считает записи конкретной симуляции и измеряет HTTP-ответы после прогрева. Новые результаты сохраняются локально.
+- Локально проверены сценарии ожидания остановки, очистки стенда при ошибке и расчёта отчёта с подменой зависимостей. Полный Compose-прогон и регенерацию TS-типов в этой среде блокируют недоступность Docker Engine и npm registry.
+
 ## 2026-11-18 — First executable educational MVP
 
 Implemented from a documentation-only repository. Implementation and documentation are grouped into local commits; no push was performed. See the commit-grouping entry below.
