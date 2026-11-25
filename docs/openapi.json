@@ -3723,7 +3723,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NoteInput"
+                "$ref": "#/components/schemas/ResolveNoteInput"
               }
             }
           }
@@ -3854,16 +3854,6 @@
       "patch": {
         "operationId": "patch_simulations_id_config",
         "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Generic"
-                }
-              }
-            }
-          },
           "401": {
             "description": "Typed error",
             "content": {
@@ -3930,6 +3920,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptedSimulationConfig"
                 }
               }
             }
@@ -7867,6 +7867,14 @@
           "note": {
             "type": "string"
           }
+        }
+      },
+      "ResolveNoteInput": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
         },
         "required": [
           "note"
@@ -7917,6 +7925,21 @@
         },
         "required": [
           "id",
+          "state"
+        ]
+      },
+      "AcceptedSimulationConfig": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
           "state"
         ]
       },

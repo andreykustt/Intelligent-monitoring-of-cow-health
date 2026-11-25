@@ -6,7 +6,11 @@ N = {"type": "number"}
 T = {"type": "string", "format": "date-time"}
 
 def obj(props, required=None):
-    return {"type": "object", "properties": props, "required": required or list(props)}
+    schema = {"type": "object", "properties": props}
+    required = list(props) if required is None else required
+    if required:
+        schema["required"] = required
+    return schema
 
 def ref(name):
     return {"$ref": "#/components/schemas/" + name}
@@ -79,17 +83,22 @@ for p in ['/metrics','/telemetry/history','/cows/{id}/measurements','/analytics/
 schemas['UserInput']=obj({'username':S,'password':S,'role':{'type':'string','enum':['admin','operator']},'farms':arr(S),'active':{'type':'boolean'}},['role','farms','active'])
 schemas['PasswordInput']=obj({'password':S})
 schemas['NoteInput']=obj({'note':S},[])
+schemas['ResolveNoteInput']=obj({'note':S})
 schemas['OK']=obj({'ok':{'type':'boolean'}})
 schemas['ID']=obj({'id':S})
 schemas['State']=obj({'state':S})
 schemas['AcceptedSimulation']=obj({'id':S,'state':S})
+schemas['AcceptedSimulationConfig']=obj({'version':{'type':'integer'},'state':S})
 schemas['Prediction']=obj({'id':S,'cow_id':S,'window_start':T,'window_end':T,'status':{'type':'string','enum':['anomaly','no_anomaly','insufficient_data']},'anomaly_score':{'type':'number','nullable':True},'model_version':S,'schema_version':{'type':'integer'},'created_at':T})
 schemas['PredictionPage']=obj({'items':arr(ref('Prediction')),'page':{'type':'integer'},'page_size':{'type':'integer'},'total':{'type':'integer'}})
-for p,m,b in [('/users','post','UserInput'),('/users/{id}','patch','UserInput'),('/users/{id}/password','post','PasswordInput'),('/alerts/{id}/acknowledge','post','NoteInput'),('/alerts/{id}/resolve','post','NoteInput')]:
+for p,m,b in [('/users','post','UserInput'),('/users/{id}','patch','UserInput'),('/users/{id}/password','post','PasswordInput'),('/alerts/{id}/acknowledge','post','NoteInput'),('/alerts/{id}/resolve','post','ResolveNoteInput')]:
     paths[p][m]['requestBody']['content']['application/json']['schema']=ref(b)
 for p,m,result in [('/auth/login','post','OK'),('/auth/logout','post','OK'),('/users','post','ID'),('/users/{id}','patch','ID'),('/users/{id}/password','post','OK'),('/cows','post','CowInput'),('/cows/{id}','patch','CowInput'),('/cows/{id}/predictions','get','PredictionPage')]:
     paths[p][m]['responses']['200']['content']['application/json']['schema']=ref(result)
 paths['/simulations']['post']['responses']['202']['content']['application/json']['schema']=ref('AcceptedSimulation')
+config_responses = paths['/simulations/{id}/config']['patch']['responses']
+config_responses['202'] = config_responses.pop('200')
+config_responses['202']['content']['application/json']['schema'] = ref('AcceptedSimulationConfig')
 for kind in ['milkings','inspections','laboratory-results','body-condition-records','veterinary-examinations']:
     paths['/'+kind]['post']['responses']['201']['content']['application/json']['schema']=ref('ID')
 for action in ['pause','resume','stop']:

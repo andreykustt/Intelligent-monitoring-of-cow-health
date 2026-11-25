@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm, cache-dependency-path: frontend/package-lock.json}
       - run: npm ci
+      - run: python3 scripts/generate_openapi.py && git diff --exit-code docs/openapi.json
+        working-directory: .
       - run: npm run generate:api && git diff --exit-code src/api-schema.d.ts
       - run: npm run lint && npm run build
   stack:

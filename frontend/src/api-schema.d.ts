@@ -860,6 +860,9 @@ export interface components {
             password: string;
         };
         NoteInput: {
+            note?: string;
+        };
+        ResolveNoteInput: {
             note: string;
         };
         OK: {
@@ -873,6 +876,10 @@ export interface components {
         };
         AcceptedSimulation: {
             id: string;
+            state: string;
+        };
+        AcceptedSimulationConfig: {
+            version: number;
             state: string;
         };
         Prediction: {
@@ -3174,7 +3181,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["NoteInput"];
+                "application/json": components["schemas"]["ResolveNoteInput"];
             };
         };
         responses: {
@@ -3361,12 +3368,12 @@ export interface operations {
         };
         responses: {
             /** @description Success */
-            200: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Generic"];
+                    "application/json": components["schemas"]["AcceptedSimulationConfig"];
                 };
             };
             /** @description Typed error */
